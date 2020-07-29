@@ -22,16 +22,13 @@ def test_create_ack_cluster():
 
     cluster_cleanup(client, cluster)
 
-def test_get_ack_config():
+def get_ack_config():
     ack_config = {
         "isAlyunKubernetes": False, # False：托管集群 True：专用集群
         "accessKeyId": ACK_ACCESS_KEY,
         "accessKeySecret": ACK_SECRET_KEY,
-        "clusterType": "ManagedKubernetes",
-        "containerCidr": "172.20.0.0/16",
         "kubernetesVersion": "1.16.9-aliyun.1",
         "proxyMode": "ipvs",
-        "serviceCidr": "172.21.0.0/20",
         "name": "ack"
     }
 

@@ -3,8 +3,16 @@
         "accessKeyId": "{{accessKeyId}}",
         "accessKeySecret": "{{accessKeySecret}}",
         "cloudMonitorFlags": false,
-        "clusterType": "{{clusterType}}",
-        "containerCidr": "{{containerCidr}}",
+        {{#isAlyunKubernetes}}
+        "clusterType": "Kubernetes",
+        "containerCidr": "172.22.0.0/16",
+        "serviceCidr": "172.23.0.0/20",
+        {{/isAlyunKubernetes}}
+        {{^isAlyunKubernetes}}
+        "clusterType": "ManagedKubernetes",
+        "containerCidr": "172.20.0.0/16",
+        "serviceCidr": "172.21.0.0/20",
+        {{/isAlyunKubernetes}}
         "disableRollback": true,
         "displayName": "{{name}}",
         "driverName": "aliyunkubernetescontainerservice",
@@ -28,7 +36,6 @@
         "regionId": "cn-shenzhen",
         "resourceGroupId": "rg-aekznqknpufycli",
         "securityGroupId": "",
-        "serviceCidr": "{{serviceCidr}}",
         "snatEntry": true,
         "sshFlags": false,
         "timeoutMins": 0,
