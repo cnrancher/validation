@@ -1,0 +1,74 @@
+{
+    "aliyunEngineConfig":{
+        "accessKeyId": "{{accessKeyId}}",
+        "accessKeySecret": "{{accessKeySecret}}",
+        "cloudMonitorFlags": false,
+        "clusterType": "{{clusterType}}",
+        "containerCidr": "{{containerCidr}}",
+        "disableRollback": true,
+        "displayName": "{{name}}",
+        "driverName": "aliyunkubernetescontainerservice",
+        "endpointPublicAccess": true,
+        "keyPair": "tlaly",
+        "kubernetesVersion": "{{kubernetesVersion}}",
+        "loginPassword": "",
+        "masterAutoRenew": true,
+        "masterAutoRenewPeriod": 1,
+        "masterInstanceChargeType": "PostPaid",
+        "masterPeriod": 1,
+        "masterPeriodUnit": "",
+        "masterSystemDiskCategory": "cloud_efficiency",
+        "masterSystemDiskSize": 120,
+        "name": "{{name}}",
+        "nodeCidrMask": "26",
+        "numOfNodes": 3,
+        "osType": "Linux",
+        "platform": "CentOS",
+        "proxyMode": "{{proxyMode}}",
+        "regionId": "cn-shenzhen",
+        "resourceGroupId": "rg-aekznqknpufycli",
+        "securityGroupId": "",
+        "serviceCidr": "{{serviceCidr}}",
+        "snatEntry": true,
+        "sshFlags": false,
+        "timeoutMins": 0,
+        "vpcId": "vpc-wz9w3n6qo00qmrz490ox9",
+        "workerAutoRenew": false,
+        "workerAutoRenewPeriod": 0,
+        "workerDataDisk": true,
+        "workerDataDiskCategory": "cloud_ssd",
+        "workerDataDiskSize": 40,
+        "workerInstanceChargeType": "PostPaid",
+        "workerPeriod": 0,
+        "workerPeriodUnit": "",
+        "workerSystemDiskCategory": "cloud_ssd",
+        "workerSystemDiskSize": 40,
+        "zoneId": "cn-shenzhen-e",
+        "type": "aliyunEngineConfig",
+        "addons": [
+            {
+                "name": "flannel"
+            }
+        ],
+        "masterVswitchIds": [
+            "vsw-wz92luxws1tw85eymhxft",
+            "vsw-wz92luxws1tw85eymhxft",
+            "vsw-wz92luxws1tw85eymhxft"
+        ],
+        "workerVswitchIds": [
+            "vsw-wz92luxws1tw85eymhxft"
+        ],
+        {{#isAlyunKubernetes}}
+        "masterInstanceTypes": [
+            "ecs.c6.large",
+            "ecs.c6.large",
+            "ecs.c6.large"
+        ],
+        {{/isAlyunKubernetes}}
+        "workerInstanceTypes": [
+            "ecs.c6.large"
+        ]
+    },
+    "name": "{{name}}",
+    "type": "cluster"
+}
