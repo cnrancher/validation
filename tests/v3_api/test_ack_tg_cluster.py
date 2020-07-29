@@ -10,6 +10,8 @@ ACK_SECRET_KEY = os.environ.get('ALIYUN_SECRET_KEY', "")
 ackcredential = pytest.mark.skipif(not (ACK_ACCESS_KEY and ACK_SECRET_KEY),
                                    reason='ACK Credentials not provided, '
                                           'cannot create cluster')
+
+
 @ackcredential
 def test_create_ack_cluster():
     client = get_admin_client()
@@ -29,7 +31,7 @@ def get_ack_config():
         "accessKeySecret": ACK_SECRET_KEY,
         "kubernetesVersion": "1.16.9-aliyun.1",
         "proxyMode": "ipvs",
-        "name": "ack"
+        "name": "tl-ack-tg"
     }
 
     path = os.getcwd() + "/v3_api/resource/ackTemplate"

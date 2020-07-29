@@ -1,13 +1,21 @@
+import pystache
+
 from .entfunc import *  # NOQA
 import pytest
 
 
 
-def test_create_ack_cluster():
+ACK_ACCESS_KEY = os.environ.get('ALIYUN_ACCESS_KEY', "")
+ACK_SECRET_KEY = os.environ.get('ALIYUN_SECRET_KEY', "")
 
+
+ackcredential = pytest.mark.skipif(not (ACK_ACCESS_KEY and ACK_SECRET_KEY),
+                                   reason='ACK Credentials not provided, '
+                                          'cannot create cluster')
+@ackcredential
+def test_create_ack_cluster():
     client = get_admin_client()
     ackConfig = get_ack_config()
-
     print("Cluster creation")
     cluster = client.create_cluster(ackConfig)
     print(cluster)
@@ -16,83 +24,28 @@ def test_create_ack_cluster():
 
     cluster_cleanup(client, cluster)
 
-
 def get_ack_config():
-
-    # name = random_test_name("test-auto-ack")
-    name = "k8s1"
-    ackConfig =  {
-        "accessKeyId": "LTAI4G9tfi9ukE4exEXtVvkh",
-        "accessKeySecret": "Y2yIncYq1F0FZ3fRPhvVnlsGRpi6sB",
-        "cloudMonitorFlags": False,
-        "clusterType": "ManagedKubernetes",
-        "containerCidr": "172.20.0.0/16",
-        "disableRollback": True,
-        "displayName": "k8s1",
-        "driverName": "aliyunkubernetescontainerservice",
-        "endpointPublicAccess": True,
-        "keyPair": "stonealy",
+    ack_config = {
+        "isAlyunKubernetes": True, # False：托管集群 True：专用集群
+        "accessKeyId": ACK_ACCESS_KEY,
+        "accessKeySecret": ACK_SECRET_KEY,
         "kubernetesVersion": "1.16.9-aliyun.1",
-        "loginPassword": "",
-        "masterAutoRenew": True,
-        "masterAutoRenewPeriod": 1,
-        "masterInstanceChargeType": "PostPaid",
-        "masterPeriod": 1,
-        "masterPeriodUnit": "",
-        "masterSystemDiskCategory": "cloud_efficiency",
-        "masterSystemDiskSize": 120,
-        "name": "k8s1",
-        "nodeCidrMask": "26",
-        "numOfNodes": 3,
-        "osType": "Linux",
-        "platform": "CentOS",
         "proxyMode": "ipvs",
-        "regionId": "cn-hangzhou",
-        "resourceGroupId": "rg-aekznqknpufycli",
-        "securityGroupId": "",
-        "serviceCidr": "172.21.0.0/20",
-        "snatEntry": False,
-        "sshFlags": False,
-        "timeoutMins": 0,
-        "vpcId": "vpc-bp1jq37z2uky1mvyoi9up",
-        "workerAutoRenew": False,
-        "workerAutoRenewPeriod": 0,
-        "workerDataDisk": True,
-        "workerDataDiskCategory": "cloud_efficiency",
-        "workerDataDiskSize": 40,
-        "workerInstanceChargeType": "PostPaid",
-        "workerPeriod": 0,
-        "workerPeriodUnit": "",
-        "workerSystemDiskCategory": "cloud_efficiency",
-        "workerSystemDiskSize": 40,
-        "zoneId": "cn-hangzhou-i",
-        "type": "aliyunEngineConfig",
-        "addons": [
-            {
-                "name": "flannel"
-            }
-        ],
-        "masterVswitchIds": [
-            "vsw-bp1syuluufo4mb4foxr2q",
-            "vsw-bp1syuluufo4mb4foxr2q",
-            "vsw-bp1syuluufo4mb4foxr2q"
-        ],
-        "workerVswitchIds": [
-            "vsw-bp1syuluufo4mb4foxr2q"
-        ],
-        "workerInstanceTypes": [
-            "ecs.c6.large"
-        ]
+        "name": "tl-ack-zy"
     }
 
-    # Generate the config for CCE cluster
-    ackConfig = {
-
-        "aliyunEngineConfig": ackConfig,
-        "name": name,
-        "type": "cluster"
-    }
-    print("\nACK Configuration")
+    path = os.getcwd() + "/v3_api/resource/ackTemplate"
+    print(path)
+    with open(path,"r") as f: # 用文件作为模板
+        ackConfig = pystache.render(f.read(), ack_config)
+        ackConfig = json.loads(ackConfig)
     print(ackConfig)
-
     return ackConfig
+
+
+
+
+
+
+
+
