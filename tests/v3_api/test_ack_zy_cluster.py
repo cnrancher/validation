@@ -34,7 +34,7 @@ def get_ack_config():
         "name": "tl-ack-zy"
     }
 
-    path = os.getcwd() + "/v3_api/resource/ackTemplate"
+    path = os.path.abspath('.') + "/tests/v3_api/resource/ackTemplate"
     print(path)
     with open(path,"r") as f: # 用文件作为模板
         ackConfig = pystache.render(f.read(), ack_config)
