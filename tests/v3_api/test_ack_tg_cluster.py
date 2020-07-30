@@ -34,7 +34,7 @@ def get_ack_config():
         "name": "tl-ack-tg"
     }
 
-    with open("resource/ackTemplate","r") as f: # 用文件作为模板
+    with open(r"resource\ackTemplate","r") as f: # 用文件作为模板
         ackConfig = pystache.render(f.read(), ack_config)
         ackConfig = json.loads(ackConfig)
     print(ackConfig)
