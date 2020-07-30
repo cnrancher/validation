@@ -10,7 +10,7 @@ aliyunecscredential = pytest.mark.skipif(not (ALIYUN_ECS_ACCESS_KEY and ALIYUN_E
                                           'cannot create cluster')
 
 @aliyunecscredential
-def test_create_aliyun_ecs_cluster():
+def test_create_ecs_cluster():
 
     client = get_admin_client()
     aliyunecsConfig = get_node_template()
