@@ -1,5 +1,3 @@
-from jsonpath import jsonpath
-
 from .common import *   # NOQA
 import pytest
 import requests
