@@ -18,6 +18,62 @@ def test_create_globalDnsServer_project():
     create_globalDnsServer_project()
 
 def test_create_globalDnsServer_multiCluster():
+    create_globalDnsServer_multiCluster()
+
+def test_delete_globalDnsServer():
+    delete_globalDnsServer()
+
+def test_delete_globaldnsprovider_rdns():
+    delete_globalDnsServer()
+    delete_globaldnsprovider_rdns()
+
+def delete_globalDnsServer():
+    client, cluster = get_admin_client_and_cluster(clusterName="local")
+    globalDns = client.list_globalDns().data
+    if 0 == len(globalDns):
+        create_globalDnsServer_project()
+    globalDnses = client.list_globalDns().data
+    for globalDnsProvider in globalDnses:
+        client.delete(globalDnsProvider)
+    # 校验
+    projects = client.list_project(clusterId=cluster.id, name='System').data
+    project = projects[-1]
+    assert len(projects) == 1
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    ingresses = p_client.list_ingress().data
+    assert len(ingresses) == 0
+
+def delete_globaldnsprovider_rdns():
+    # 删除globaldnsprovider
+    client,cluster= get_admin_client_and_cluster(clusterName="local")
+    globalDnsProviders = client.list_globalDnsProvider().data
+    if 0 == len(globalDnsProviders):
+        create_globaldnsprovider_rdns()
+    globalDnsProviders = client.list_globalDnsProvider().data
+    for globalDnsProvider in globalDnsProviders:
+        client.delete(globalDnsProvider)
+    # 校验
+    projects = client.list_project(clusterId=cluster.id, name='System').data
+    project = projects[-1]
+    assert len(projects) == 1
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    wait_for_app_to_remove(p_client)
+    apps = p_client.list_app().data
+    assert len(apps)==0
+
+def wait_for_app_to_remove(client, timeout=DEFAULT_TIMEOUT):
+    apps = client.list_app().data
+    appsCount = len(apps)
+    start = time.time()
+    while appsCount != 0:
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(.5)
+        apps = client.list_app().data
+        appsCount = len(apps)
+
+def create_globalDnsServer_multiCluster():
     # 创建项目和空间
     client = get_admin_client()
     clusters = client.list_cluster().data
@@ -143,11 +199,6 @@ def wait_for_multiClusterApp_to_active(client,multiClusterAppName,timeout=DEFAUL
             active_count += 1
     return app1
 
-
-def test_delete_all_globaldnsprovider_rdns():
-    client, cluster = get_admin_client_and_cluster(clusterName="local")
-    globalDnsProviders = client.list_globalDnsProvider().data
-    print(globalDnsProviders)
 
 def create_globaldnsprovider_rdns():
     # 添加全局提供商
@@ -276,5 +327,4 @@ def get_rdns_globaldnsprovider():
         "rootDomain": rootDomain
     }
     return rdnsGlobaldnsprovider
-
 
