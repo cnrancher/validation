@@ -127,7 +127,7 @@ def create_globalDnsServer_multiCluster():
     app = wait_for_multiClusterApp_to_active(client,multiClusterAppName)
     assert app.state == "active"
     # 添加全局DNS提供商
-    create_globaldnsprovider_rdns()
+    #create_globaldnsprovider_rdns()
     # 添加DNS记录
     providerId = "cattle-global-data" + ":" + GlobalDnsProvider
     multiClusterAppId = "cattle-global-data" + ":" + multiClusterAppName
@@ -240,7 +240,7 @@ def create_globalDnsServer_project():
     workload = wait_for_wl_to_active(p_client, workload)
     assert workload.state == "active"
     #添加全局DNS提供商
-    create_globaldnsprovider_rdns()
+    #create_globaldnsprovider_rdns()
     # 添加DNS记录
     providerId = "cattle-global-data" + ":" + GlobalDnsProvider
     fqdn = random_name() + "." + RootDomain
