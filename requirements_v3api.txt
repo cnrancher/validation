@@ -18,3 +18,4 @@ PyYAML==3.13
 requests==2.19.1
 websocket-client==0.53.0
 pystache==0.5.4
+pytest-lazy-fixture==0.6.3

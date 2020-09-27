@@ -5,15 +5,20 @@ from .entfunc import *
 
 RootDomain="stone.lb.rancher.cloud"
 GlobalDnsProvider=random_test_name("global-rdns")
-etcdUrls = os.environ.get('RANCHER_ETCD_URLS', "http://3.34.241.83:2379")
+etcdUrls = os.environ.get('RANCHER_ETCD_URLS', "http://54.252.148.247:2379")
 rootDomain = os.environ.get('RANCHER_ROOT_DOMAIN',"stone.lb.rancher.cloud")
 
+def print_object(obj):
+    print('\n'.join(['%s:%s' % item for item in obj.__dict__.items()]))
 
 def test_create_globaldnsprovider_rdns():
     create_globaldnsprovider_rdns()
 
-def test_create_globalDnsServer_project():
-    create_globalDnsServer_project()
+def test_create_globalDnsServer_project_workload():
+    create_globalDnsServer_project_workload()
+
+def test_create_globalDnsServer_project_service():
+    create_globalDnsServer_project_service()
 
 def test_create_globalDnsServer_multiCluster():
     create_globalDnsServer_multiCluster()
@@ -22,14 +27,13 @@ def test_delete_globalDnsServer():
     delete_globalDnsServer()
 
 def test_delete_globaldnsprovider_rdns():
-    delete_globalDnsServer()
     delete_globaldnsprovider_rdns()
 
 def delete_globalDnsServer():
     client, cluster = get_admin_client_and_cluster(clusterName="local")
     globalDns = client.list_globalDns().data
     if 0 == len(globalDns):
-        create_globalDnsServer_project()
+        create_globalDnsServer_project_workload()
     globalDnses = client.list_globalDns().data
     for globalDnsProvider in globalDnses:
         client.delete(globalDnsProvider)
@@ -39,7 +43,7 @@ def delete_globalDnsServer():
     assert len(projects) == 1
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
     ingresses = p_client.list_ingress().data
-    assert len(ingresses) == 0
+    assert len(ingresses) == 2
 
 def delete_globaldnsprovider_rdns():
     # 删除globaldnsprovider
@@ -221,7 +225,7 @@ def get_admin_client_and_cluster(clusterName):
     cluster = clusters[0]
     return client,cluster
 
-def create_globalDnsServer_project():
+def create_globalDnsServer_project_workload():
     # 创建项目和空间
     client, cluster = get_admin_client_and_cluster(clusterName="k8s")
     create_kubeconfig(cluster)
@@ -240,6 +244,7 @@ def create_globalDnsServer_project():
     workload = wait_for_wl_to_active(p_client, workload)
     assert workload.state == "active"
     #添加全局DNS提供商
+
     #create_globaldnsprovider_rdns()
     # 添加DNS记录
     providerId = "cattle-global-data" + ":" + GlobalDnsProvider
@@ -280,11 +285,216 @@ def create_globalDnsServer_project():
 
 
 
+def create_globalDnsServer_project_service():
+    # 创建项目和空间
+    client, cluster = get_admin_client_and_cluster(clusterName="k8s")
+    create_kubeconfig(cluster)
+    ns_name = random_test_name("rdns")
+    project, namespace = create_project_and_ns(ADMIN_TOKEN, cluster, random_test_name("p-rdns"), ns_name)
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    pId = project.id
+    #创建workload
+    wl_name = random_test_name("wl-rdns")
+    con = [{"name": "test1",
+            "image": TEST_IMAGE}]
+    workload = p_client.create_workload(name=wl_name,
+                                        containers=con,
+                                        namespaceId=namespace.id,
+                                        deploymentConfig={})
+    workload = wait_for_wl_to_active(p_client, workload)
+    assert workload.state == "active"
+    #添加全局DNS提供商
+
+    #create_globaldnsprovider_rdns()
+    # 添加DNS记录
+    providerId = "cattle-global-data" + ":" + GlobalDnsProvider
+    fqdn = random_name() + "." + RootDomain
+    globalDns = {
+        "ttl":300,
+        "type":"globaldns",
+        "name":None,
+        "projectIds":[
+            pId
+        ],
+        "providerId":providerId,
+        "fqdn":fqdn
+    }
+    globalDns = client.create_globalDns(globalDns)
+    assert globalDns.state == "active"
+    # 查看 serviceId
+    services =  p_client.list_service(namespaceId=namespace.id).data
+    service = services[0]
+    # 创建Ingress规则
+    rule = {"host": fqdn,
+            "new" : True,
+            "paths":
+                [{"serviceId": service.id, "targetPort": "42"}]}
+    annotations = {
+        "rancher.io/globalDNS.hostname": fqdn
+    }
+    ingress_name = "ingress" + "-" + wl_name
+    ingress = p_client.create_ingress(name=ingress_name,
+                                      namespaceId=namespace.id,
+                                      rules=[rule],
+                                      annotations=annotations)
+    wait_for_ingress_to_active(p_client, ingress)
+
+    # yaml校验
+    cmd = "get ingress " + ingress_name + " -n " + ns_name
+    result = execute_kubectl_cmd_with_code(cmd, json_out=True, stderr=False, stderrcode=False)
+    nodes = client.list_node(clusterId=cluster.id).data
+    assert result["status"]["loadBalancer"]["ingress"][0]["ip"]==nodes[0]['ipAddress']
+
+
+@pytest.fixture(params=[pytest.lazy_fixture('get_ingress_service_path'),
+                        pytest.lazy_fixture('get_ingress_workload_path')])
+def param_ingress_paths(request):
+    return request.param
+
+
+
+def get_workload_and_service():
+    # 创建项目和空间
+    client, cluster = get_admin_client_and_cluster(clusterName="k8s")
+    create_kubeconfig(cluster)
+    ns_name = random_test_name("rdns")
+    project, namespace = create_project_and_ns(ADMIN_TOKEN, cluster, random_test_name("p-rdns"), ns_name)
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    pId = project.id
+    # 创建workload
+    wl_name = random_test_name("wl-rdns")
+    con = [{"name": "test1",
+            "image": TEST_IMAGE}]
+    workload = p_client.create_workload(name=wl_name,
+                                        containers=con,
+                                        namespaceId=namespace.id,
+                                        deploymentConfig={})
+    workload = wait_for_wl_to_active(p_client, workload)
+    assert workload.state == "active"
+    # 查看 serviceId
+    services = p_client.list_service(namespaceId=namespace.id).data
+    service = services[0]
+    return workload,service
+
+@pytest.fixture
+def get_ingress_service_path():
+    workload,service = get_workload_and_service()
+    # paths
+    path = [{"serviceId": service.id, "targetPort": "42"}]
+    return path
+
+@pytest.fixture
+def get_ingress_workload_path():
+    # 创建项目和空间
+    workload,service = get_workload_and_service()
+
+    # paths
+    path = [{"workloadIds": [workload.id], "targetPort": "80"}]
+    return path
+
+@pytest.mark.parametrize('z', [pytest.lazy_fixture('param_ingress_paths')])
+def test_3(z):
+    # 添加DNS记录
+    providerId = "cattle-global-data" + ":" + GlobalDnsProvider
+    fqdn = random_name() + "." + RootDomain
+    globalDns = {
+        "ttl": 300,
+        "type": "globaldns",
+        "name": None,
+        "projectIds": [
+            pId
+        ],
+        "providerId": providerId,
+        "fqdn": fqdn
+    }
+    globalDns = client.create_globalDns(globalDns)
+    assert globalDns.state == "active"
+    rule = {"host": fqdn,
+            "new": True,
+            "paths":
+                [{"serviceId": service.id, "targetPort": "42"}]}
+    annotations = {
+        "rancher.io/globalDNS.hostname": fqdn
+    }
+    ingress_name = "ingress" + "-" + wl_name
+    ingress = p_client.create_ingress(name=ingress_name,
+                                      namespaceId=namespace.id,
+                                      rules=[rule],
+                                      annotations=annotations)
+    wait_for_ingress_to_active(p_client, ingress)
+
+    # yaml校验
+    cmd = "get ingress " + ingress_name + " -n " + ns_name
+    result = execute_kubectl_cmd_with_code(cmd, json_out=True, stderr=False, stderrcode=False)
+    nodes = client.list_node(clusterId=cluster.id).data
+    assert result["status"]["loadBalancer"]["ingress"][0]["ip"] == nodes[0]['ipAddress']
+
+
+def test_one():
+    # 创建项目和空间
+    client, cluster = get_admin_client_and_cluster(clusterName="k8s")
+    create_kubeconfig(cluster)
+    ns_name = random_test_name("rdns")
+    project, namespace = create_project_and_ns(ADMIN_TOKEN, cluster, random_test_name("p-rdns"), ns_name)
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    pId = project.id
+    #创建workload
+    wl_name = random_test_name("wl-rdns")
+    con = [{"name": "test1",
+            "image": TEST_IMAGE}]
+    workload = p_client.create_workload(name=wl_name,
+                                        containers=con,
+                                        namespaceId=namespace.id,
+                                        deploymentConfig={})
+    workload = wait_for_wl_to_active(p_client, workload)
+    assert workload.state == "active"
+    #添加全局DNS提供商
+
+    #create_globaldnsprovider_rdns()
+    # 添加DNS记录
+    providerId = "cattle-global-data" + ":" + GlobalDnsProvider
+    fqdn = random_name() + "." + RootDomain
+    globalDns = {
+        "ttl":300,
+        "type":"globaldns",
+        "name":None,
+        "projectIds":[
+            pId
+        ],
+        "providerId":providerId,
+        "fqdn":fqdn
+    }
+    globalDns = client.create_globalDns(globalDns)
+    assert globalDns.state == "active"
+    # 查看 serviceId
+    services =  p_client.list_service(namespaceId=namespace.id).data
+    service = services[0]
+    # 创建Ingress规则
+    rule = {"host": fqdn,
+            "new" : True,
+            "paths":
+                [{"serviceId": service.id, "targetPort": "42"}]}
+    annotations = {
+        "rancher.io/globalDNS.hostname": fqdn
+    }
+    ingress_name = "ingress" + "-" + wl_name
+    ingress = p_client.create_ingress(name=ingress_name,
+                                      namespaceId=namespace.id,
+                                      rules=[rule],
+                                      annotations=annotations)
+    wait_for_ingress_to_active(p_client, ingress)
+
+    # yaml校验
+    cmd = "get ingress " + ingress_name + " -n " + ns_name
+    result = execute_kubectl_cmd_with_code(cmd, json_out=True, stderr=False, stderrcode=False)
+    nodes = client.list_node(clusterId=cluster.id).data
+    assert result["status"]["loadBalancer"]["ingress"][0]["ip"]==nodes[0]['ipAddress']
+
 def wait_for_app_to_active(client, app, timeout=DEFAULT_TIMEOUT):
     apps = client.list_app(name=app).data
     assert len(apps) >= 1
     application = apps[0]
-
+    time.sleep(10)
     start = time.time()
     apps = client.list_app(uuid=application.uuid).data
     assert len(apps) == 1
@@ -293,7 +503,7 @@ def wait_for_app_to_active(client, app, timeout=DEFAULT_TIMEOUT):
         if time.time() - start > timeout:
             raise AssertionError(
                 "Timed out waiting for state to get to active")
-        time.sleep(.5)
+        time.sleep(10)
         apps = client.list_app(uuid=application.uuid).data
         assert len(apps) == 1
         app1 = apps[0]
