@@ -98,3 +98,42 @@ def test_sort_time():
             time = tag['push_time']
             result.append(name)
     print(sorted(result))
+
+
+def test_node():
+    client, cluster = get_admin_client_and_cluster()
+    nodes = client.list_node(name='tt', clusterId=cluster.id).data
+    assert len(nodes) == 1
+    node = nodes[0]
+    print(node)
+    time.sleep(100)
+    node = client.reload(node)
+    print(node)
+
+
+def test_project():
+    share_resource_quota = {"limit": {"requestsGpuMemory": "4"}}
+
+    share_namespace_resource_quota = {"limit": {"requestsGpuMemory": "2"}}
+
+    client, cluster = get_admin_client_and_cluster()
+    project = client.create_project(name=random_test_name('gpu_quota'),
+                                    clusterId=cluster.id)
+
+    print(project.__dict__)
+    print(project.clusterId)
+
+    p = client.update(project, resourceQuota=share_resource_quota, namespaceDefaultResourceQuota=share_namespace_resource_quota)
+    print(p.__dict__)
+    print(p.clusterId)
+
+
+def test_haha():
+    result = False
+    pods = [{"id":"as","nodeId":"ip1"},{"id":"qw","nodeId":"ip2"}]
+    for pod in pods:
+        print(pod)
+        if pod["nodeId"] == 'ip1':
+            result = True
+            break
+    print(result)
